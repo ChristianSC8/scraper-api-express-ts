@@ -1,9 +1,5 @@
 // External dependencies
 import { Request, Response } from 'express';
-import { PoolClient } from 'pg';
-
-// Configurations
-import { pool } from '../../config/db-connect';
 
 // Services
 import { getUserByRefreshToken } from '../../services/auth-service';
@@ -11,7 +7,7 @@ import { updateUser } from '../../services/user-service';
 
 
 export const handleLogout = async (req: Request, res: Response): Promise<Response> => {
-    const client: PoolClient = await pool.connect();
+
     const cookies = req.cookies;
 
     if (!cookies?.jwt) {
@@ -19,7 +15,7 @@ export const handleLogout = async (req: Request, res: Response): Promise<Respons
     }
 
     const refreshToken = cookies.jwt;
-    const foundUser = await getUserByRefreshToken(refreshToken, client);
+    const foundUser = await getUserByRefreshToken(refreshToken);
 
     if (!foundUser) {
         res.clearCookie('jwt', { httpOnly: true, sameSite: 'none', secure: true });
@@ -34,7 +30,7 @@ export const handleLogout = async (req: Request, res: Response): Promise<Respons
         refresh_token: ""
     };
 
-    await updateUser(userToUpdate, client);
+    await updateUser(userToUpdate);
 
     res.clearCookie('jwt', { httpOnly: true, sameSite: 'none', secure: true });
     return res.status(200).json({ message: "Successfully logged out" });

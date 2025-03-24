@@ -1,30 +1,38 @@
-import { PoolClient } from "pg";
+import supabase from "../config/db-connect";
 
-export const storeRefreshToken = async (
-    userId: number,
-    refreshToken: string,
-    client: PoolClient
-): Promise<void> => {
+export const storeRefreshToken = async (userId: number, refreshToken: string): Promise<void> => {
     try {
-        await client.query(
-            "UPDATE users SET refresh_token = $1 WHERE id = $2",
-            [refreshToken, userId]
-        );
+        const { error } = await supabase
+            .from("users")
+            .update({ refresh_token: refreshToken })
+            .eq("id", userId);
+
+        if (error) {
+            console.error("Error storing refresh token:", error.message);
+            throw error;
+        }
     } catch (error) {
-        console.error("Error storing refresh token:", error);
+        console.error("Unexpected error in storeRefreshToken:", error);
         throw error;
     }
 };
 
-export const getUserByRefreshToken = async (refreshToken: string, client: PoolClient): Promise<any> => {
+export const getUserByRefreshToken = async (refreshToken: string): Promise<any | null> => {
     try {
-        const result = await client.query(
-            'SELECT * FROM users WHERE refresh_token = $1',
-            [refreshToken]
-        );
-        return result.rows[0]; 
+        const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("refresh_token", refreshToken)
+            .single();
+
+        if (error) {
+            console.error("Error fetching user by refresh token:", error.message);
+            return null;
+        }
+
+        return data;
     } catch (error) {
-        console.error('Error fetching user by refreshToken:', error);
-        throw error;
+        console.error("Unexpected error in getUserByRefreshToken:", error);
+        return null;
     }
 };

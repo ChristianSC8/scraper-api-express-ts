@@ -3,10 +3,6 @@ const jwt = require('jsonwebtoken');
 import { JwtPayload } from "jsonwebtoken";
 import { Request, Response } from "express";
 import { PoolClient } from "pg";
-
-// Configurations
-import { pool } from "../../config/db-connect";
-
 // Services
 import { getUserByRefreshToken } from "../../services/auth-service";
 import { getUserRoles } from "../../services/roles-service";
@@ -22,9 +18,8 @@ export const handleRefreshToken = async (req: Request, res: Response): Promise<v
     }
     const refreshToken = cookies.jwt;
 
-    const client: PoolClient = await pool.connect();
 
-    const foundUser = await getUserByRefreshToken(refreshToken, client);
+    const foundUser = await getUserByRefreshToken(refreshToken);
     if (!foundUser) {
         res.sendStatus(403);
         return
@@ -39,7 +34,7 @@ export const handleRefreshToken = async (req: Request, res: Response): Promise<v
                 return res.sendStatus(403);
             }
             const userId = foundUser.id;
-            const roles = await getUserRoles(userId, client);
+            const roles = await getUserRoles(userId);
 
             const accessToken = jwt.sign(
                 {

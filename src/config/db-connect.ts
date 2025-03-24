@@ -1,38 +1,10 @@
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
-    port: Number(process.env.DB_PORT) || 5432,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-});
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-pool.on('connect', () => {
-    console.log('Connected to the database');
-});
-
-pool.on('error', (err) => {
-    console.error('Database connection error:', err);
-});
-
-const query = async (text: string, params?: any[]) => {
-    const client = await pool.connect();
-    try {
-        const res = await client.query(text, params);
-        return res;
-    } catch (err) {
-        console.error('Query error:', err);
-        throw err;
-    } finally {
-        client.release();
-    }
-};
-
-export { pool, query };
+export default supabase;

@@ -4,12 +4,10 @@ dotenv.config();
 
 // External dependencies
 import { Request, Response } from "express";
-import { PoolClient } from "pg";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 // Configurations
-import { pool } from "../../config/db-connect";
 
 // Services
 import { getUserByEmail } from "../../services/user-service";
@@ -24,10 +22,9 @@ export const handleSignIn = async (req: Request, res: Response): Promise<Respons
         return res.status(400).json({ message: "Missing required fields: email and password" });
     }
 
-    const client: PoolClient = await pool.connect();
 
     try {
-        const findEmail = await getUserByEmail(email, client);
+        const findEmail = await getUserByEmail(email);
 
         if (!findEmail) {
             return res.sendStatus(404);
@@ -36,7 +33,7 @@ export const handleSignIn = async (req: Request, res: Response): Promise<Respons
         const match = await bcrypt.compare(password, findEmail.password);
 
         if (match) {
-            const roles = await getUserRoles(findEmail.id, client);
+            const roles = await getUserRoles(findEmail.id);
 
             const accessToken = jwt.sign(
                 {
@@ -55,7 +52,7 @@ export const handleSignIn = async (req: Request, res: Response): Promise<Respons
                 { expiresIn: '1d' }
             );
 
-            await storeRefreshToken(findEmail.id, refreshToken, client);
+            await storeRefreshToken(findEmail.id, refreshToken);
 
             res.cookie('jwt', refreshToken, {
                 httpOnly: true,
@@ -71,7 +68,5 @@ export const handleSignIn = async (req: Request, res: Response): Promise<Respons
     } catch (error) {
         console.error("Error signing in:", error);
         return res.status(500).json({ message: "Internal Server Error" });
-    } finally {
-        client.release();
     }
 };

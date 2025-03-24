@@ -1,12 +1,17 @@
-import { PoolClient } from "pg";
 import { User } from "../models/user-model";
+import supabase from "../config/db-connect";
 
-export const getEmail = async (
-    email: string,
-    client: PoolClient
-) => {
+export const getEmail = async (email: string): Promise<boolean> => {
     try {
-        return await client.query("SELECT 1 FROM users WHERE email = $1 LIMIT 1", [email]);
+        const { data, error } = await supabase
+            .from("users")
+            .select("id")
+            .eq("email", email)
+            .single();
+
+        if (error && error.code !== "PGRST116") throw error;
+        return !!data;
+
     } catch (error) {
         console.error("Error checking email:", error);
         throw error;
@@ -16,64 +21,71 @@ export const getEmail = async (
 export const newUserId = async (
     username: string,
     email: string,
-    hashedPassword: string,
-    client: PoolClient
+    hashedPassword: string
 ): Promise<number> => {
     try {
-        const result = await client.query(
-            "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id",
-            [username, email, hashedPassword]
-        );
-        return result.rows[0].id;
+        const { data, error } = await supabase
+            .from("users")
+            .insert([{ username, email, password: hashedPassword }])
+            .select("id")
+            .single();
+
+        if (error || !data) throw error;
+        return data.id;
+
     } catch (error) {
         console.error("Error creating user:", error);
         throw error;
     }
 };
 
-
-export const getUserByEmail = async (email: string, client: PoolClient) => {
+export const getUserByEmail = async (email: string) => {
     try {
-        const result = await client.query(
-            "SELECT * FROM users WHERE email = $1 LIMIT 1",
-            [email]
-        );
+        const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", email)
+            .single();
 
-        if (result.rowCount === null || result.rowCount === 0) {
-            return null;
+        if (error) {
+            if (error.code === "PGRST116") return null;
+            throw error;
         }
-        return result.rows[0];
+
+        return data;
     } catch (error) {
         console.error("Error fetching user by email:", error);
         throw error;
     }
 };
 
-export const updateUser = async (user: User, client: PoolClient) => {
+export const updateUser = async (user: User) => {
     try {
-        const { id, username, email, password, refresh_token } = user;
-        const fields: { [key: string]: any } = { username, email, password, refresh_token };
-        const setValues: string[] = [];
-        const values: any[] = [];
-        let index = 1;
+        const { id, ...updatedFields } = user;
 
-        for (const [field, value] of Object.entries(fields)) {
-            if (value !== undefined) {
-                setValues.push(`${field} = $${index}`);
-                values.push(value);
-                index++;
-            }
-        }
+        const { data, error } = await supabase
+            .from("users")
+            .update(updatedFields)
+            .eq("id", id)
+            .select()
+            .single();
 
-        if (setValues.length === 0) return null;
+        if (error) throw error;
 
-        const query = `UPDATE users SET ${setValues.join(', ')} WHERE id = $${index} RETURNING *`;
-        values.push(id);
-
-        const { rows } = await client.query(query, values);
-        return rows[0];
+        return data;
     } catch (error) {
         console.error("Error updating user:", error);
         throw error;
     }
+};
+
+export const deleteUserById = async (userId: number): Promise<string> => {
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+
+    if (error) {
+        console.error("Error deleting user:", error.message);
+        return "Failed to delete user.";
+    }
+
+    return "User deleted successfully.";
 };
