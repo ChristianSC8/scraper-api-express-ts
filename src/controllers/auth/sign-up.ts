@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 // Configurations
 import { ROLES } from "../../config/roles";
 // Services
