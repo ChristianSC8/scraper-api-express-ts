@@ -2,7 +2,6 @@
 const jwt = require('jsonwebtoken');
 import { JwtPayload } from "jsonwebtoken";
 import { Request, Response } from "express";
-import { PoolClient } from "pg";
 // Services
 import { getUserByRefreshToken } from "../../services/auth-service";
 import { getUserRoles } from "../../services/roles-service";
